@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using Microsoft.SPOT;
 using Microsoft.SPOT.Hardware;
 
@@ -19,6 +20,7 @@ namespace Gralin.NETMF.ST.CRX14
             var crx14 = CRX14.UseSoftwareI2C(0, SdaPin, SclPin);
             var led = new OutputPort(LedPin, false);
 
+            Debug.EnableGCMessages(false);
             Debug.Print("Waiting for TAG...");
 
             while (true)
@@ -31,20 +33,45 @@ namespace Gralin.NETMF.ST.CRX14
 
                     foreach (var tag in tags)
                     {
-                        Debug.Print("TAG: " + tag);
-                        var eeprom = crx14.ReadEeprom(tag);
-                        Debug.Print("Eeprom: " + eeprom.Length + " bytes");
-                    }
+                        try
+                        {
+                            Debug.Print("TAG: " + tag);
 
-                    break;
+                            const byte blockNum = 0;
+
+                            Debug.Print("Reading eeprom block " + blockNum);
+                            var bytes = crx14.ReadEeprom(tag, blockNum);
+                            Debug.Print("bytes.Length = " + bytes.Length);
+                            Debug.Print("bytes[0] = " + bytes[0]);
+
+                            Debug.Print("Incrementing and saving");
+                            bytes[0]++;
+                            crx14.WriteEeprom(tag, 0, bytes);
+
+                            Debug.Print("Reading eeprom block " + blockNum);
+                            // to prove the value is read from TAG
+                            bytes[0] = 0;
+                            bytes = crx14.ReadEeprom(tag, blockNum);
+                            Debug.Print("bytes[0] = " + bytes[0]);
+
+                            led.Write(!led.Read());
+                            crx14.UnselectTags();
+                        }
+                        catch (ArgumentException)
+                        {
+                            Debug.Print("Failed to select TAG, plase it closer to reader!");
+                        }
+                        finally
+                        {
+                            Debug.Print("");
+                            Debug.Print("===============================");
+                            Debug.Print("");
+                        }
+                    }
                 }
 
                 Thread.Sleep(1000);
             }
-
-            led.Write(true);
-            Debug.Print("Finished");
-            Thread.Sleep(Timeout.Infinite);
         }
     }
 }
