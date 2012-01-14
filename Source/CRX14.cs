@@ -152,7 +152,7 @@ namespace Gralin.NETMF.ST.CRX14
 
             for (byte i = 0; i < data.Length; i+=BytesPerBlock)
             {
-                WriteFrame(ISO14443B.WriteBlockFrame(blockNum, data, dataOffset));
+                WriteEeprom(blockNum, data, dataOffset);
                 blockNum++;
                 dataOffset += BytesPerBlock;
             }
@@ -169,7 +169,7 @@ namespace Gralin.NETMF.ST.CRX14
             if (!SelectTag(tag))
                 throw new ArgumentException("Unable to select tag");
 
-            WriteFrame(ISO14443B.WriteBlockFrame((byte) (BlockOffset + blockNum), data));
+            WriteEeprom((byte) (BlockOffset + blockNum), data, 0);
         }
 
         /// <summary>
@@ -248,6 +248,13 @@ namespace Gralin.NETMF.ST.CRX14
             var uid = new byte[8];
             Array.Copy(result, 1, uid, 0, uid.Length);
             return uid;
+        }
+
+        protected void WriteEeprom(byte blockNum, byte[] data, byte dataOffset)
+        {
+            WriteFrame(ISO14443B.WriteBlockFrame(blockNum, data, dataOffset));
+            // delay added so data can be saved
+            Thread.Sleep(5);
         }
 
         protected bool WriteParameter(byte value)
